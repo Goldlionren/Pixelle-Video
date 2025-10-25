@@ -13,10 +13,9 @@ from typing import List, Optional, Literal
 from loguru import logger
 
 from reelforge.models.storyboard import StoryboardConfig, ContentMetadata
-from reelforge.prompts.narration_template import (
+from reelforge.prompts import (
     build_topic_narration_prompt,
     build_content_narration_prompt,
-    build_narration_prompt  # Keep for backward compatibility
 )
 
 
@@ -158,7 +157,7 @@ class NarrationGeneratorService:
             pass
         
         # Try to extract JSON from markdown code block
-        json_pattern = r'```(?:json)?\s*(\{.*?\})\s*```'
+        json_pattern = r'```(?:json)?\s*([\s\S]+?)\s*```'
         match = re.search(json_pattern, text, re.DOTALL)
         if match:
             try:

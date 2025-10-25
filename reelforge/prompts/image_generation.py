@@ -1,5 +1,7 @@
 """
 Image prompt generation template
+
+For generating image prompts from narrations.
 """
 
 import json
@@ -38,6 +40,8 @@ IMAGE_PROMPT_GENERATION_PROMPT = """# 角色定位
 
 # 核心任务
 基于已有的视频脚本，为每个分镜的"旁白内容"创作对应的**英文**图像提示词，确保视觉画面与叙述内容完美配合，增强观众的理解和记忆。
+
+**重要：输入包含 {narrations_count} 个旁白，你必须为每个旁白都生成一个对应的图像提示词，总共输出 {narrations_count} 个图像提示词。**
 
 # 输入内容
 {narrations_json}
@@ -92,13 +96,14 @@ IMAGE_PROMPT_GENERATION_PROMPT = """# 角色定位
 1. 只输出JSON格式内容，不要添加任何解释说明
 2. 确保JSON格式严格正确，可以被程序直接解析
 3. 输入是 {{"narrations": [旁白数组]}} 格式，输出是 {{"image_prompts": [图像提示词数组]}} 格式
-4. **图像提示词必须使用英文**（for AI image generation models）
-5. 图像提示词必须准确反映对应旁白的具体内容和情感
-6. 每个图像都要有创意性和视觉冲击力，避免千篇一律
-7. 严格遵守上述指定的画面风格要求（{style_description}）
-8. 确保视觉画面能增强文案的说服力和观众的理解度
+4. **输出的image_prompts数组必须恰好包含 {narrations_count} 个元素，与输入的narrations数组一一对应**
+5. **图像提示词必须使用英文**（for AI image generation models）
+6. 图像提示词必须准确反映对应旁白的具体内容和情感
+7. 每个图像都要有创意性和视觉冲击力，避免千篇一律
+8. 严格遵守上述指定的画面风格要求（{style_description}）
+9. 确保视觉画面能增强文案的说服力和观众的理解度
 
-现在，请为上述旁白创作对应的**英文**图像提示词。只输出JSON，不要其他内容。
+现在，请为上述 {narrations_count} 个旁白创作对应的 {narrations_count} 个**英文**图像提示词。只输出JSON，不要其他内容。
 """
 
 
@@ -161,6 +166,7 @@ def build_image_prompt_prompt(
     
     return IMAGE_PROMPT_GENERATION_PROMPT.format(
         narrations_json=narrations_json,
+        narrations_count=len(narrations),
         min_words=min_words,
         max_words=max_words,
         style_description=style_desc

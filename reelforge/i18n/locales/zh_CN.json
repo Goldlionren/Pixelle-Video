@@ -12,6 +12,10 @@
     "input_mode.topic": "💡 主题",
     "input_mode.custom": "✍️ 自定义内容",
     
+    "mode.generate": "💡 生成模式",
+    "mode.fixed": "📄 固定模式",
+    "mode.help": "生成模式：AI 从主题创作旁白。固定模式：使用现成脚本，不做修改。",
+    
     "input.book_name": "书名",
     "input.book_name_placeholder": "例如：原子习惯、人性的弱点、Atomic Habits",
     "input.book_name_help": "输入书名，将自动获取书籍信息并生成视频",
@@ -20,12 +24,17 @@
     "input.topic_placeholder": "例如：如何增加被动收入、How to build good habits",
     "input.topic_help": "输入一个主题，AI 将根据主题生成内容",
     
+    "input.text": "文本输入",
+    "input.text_help_generate": "输入主题或话题（AI 将创作旁白）",
+    "input.text_help_fixed": "输入完整的旁白脚本（将被切分成分镜）",
+    
     "input.content": "内容",
     "input.content_placeholder": "在此输入您的自定义内容...",
     "input.content_help": "提供您自己的内容用于视频生成",
     
     "input.title": "标题（可选）",
     "input.title_placeholder": "视频标题（留空则自动生成）",
+    "input.title_help": "可选：自定义视频标题",
     
     "book.search": "🔍 搜索书籍",
     "book.searching": "正在搜索书籍...",
@@ -63,9 +72,10 @@
     "template.neon": "Neon",
     
     "video.title": "🎬 视频设置",
-    "video.frames": "帧数",
-    "video.frames_help": "更多帧数 = 更长视频",
-    "video.frames_label": "帧数：{n}",
+    "video.frames": "分镜数",
+    "video.frames_help": "更多分镜 = 更长视频",
+    "video.frames_label": "分镜数：{n}",
+    "video.frames_fixed_mode_hint": "💡 固定模式：分镜数由脚本实际段落数决定",
     
     "bgm.title": "🎵 背景音乐",
     "bgm.none": "🔇 无背景音乐",
@@ -90,6 +100,7 @@
     "status.connection_failed": "❌ 连接失败",
     
     "progress.generating_narrations": "生成旁白...",
+    "progress.splitting_script": "切分脚本...",
     "progress.generating_image_prompts": "生成图片提示词...",
     "progress.frame": "分镜 {current}/{total}",
     "progress.frame_step": "分镜 {current}/{total} - 步骤 {step}/4: {action}",

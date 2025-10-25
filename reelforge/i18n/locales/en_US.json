@@ -12,6 +12,10 @@
     "input_mode.topic": "💡 Topic",
     "input_mode.custom": "✍️ Custom Content",
     
+    "mode.generate": "💡 Generate Mode",
+    "mode.fixed": "📄 Fixed Mode",
+    "mode.help": "Generate: AI creates narrations from topic. Fixed: Use existing script without modification.",
+    
     "input.book_name": "Book Name",
     "input.book_name_placeholder": "e.g., Atomic Habits, How to Win Friends",
     "input.book_name_help": "Enter the book name, will fetch book info and generate video",
@@ -20,12 +24,17 @@
     "input.topic_placeholder": "e.g., How to build passive income, How to build good habits",
     "input.topic_help": "Enter a topic, AI will generate content based on it",
     
+    "input.text": "Text Input",
+    "input.text_help_generate": "Enter topic or theme (AI will create narrations)",
+    "input.text_help_fixed": "Enter complete narration script (will be split into scenes)",
+    
     "input.content": "Content",
     "input.content_placeholder": "Enter your custom content here...",
     "input.content_help": "Provide your own content for video generation",
     
     "input.title": "Title (Optional)",
     "input.title_placeholder": "Video title (auto-generated if empty)",
+    "input.title_help": "Optional: Custom title for the video",
     
     "book.search": "🔍 Search Book",
     "book.searching": "Searching book...",
@@ -63,9 +72,10 @@
     "template.neon": "Neon",
     
     "video.title": "🎬 Video Settings",
-    "video.frames": "Frames",
-    "video.frames_help": "More frames = longer video",
-    "video.frames_label": "Frames: {n}",
+    "video.frames": "Scenes",
+    "video.frames_help": "More scenes = longer video",
+    "video.frames_label": "Scenes: {n}",
+    "video.frames_fixed_mode_hint": "💡 Fixed mode: scene count is determined by actual script segments",
     
     "bgm.title": "🎵 Background Music",
     "bgm.none": "🔇 No BGM",
@@ -90,6 +100,7 @@
     "status.connection_failed": "❌ Connection failed",
     
     "progress.generating_narrations": "Generating narrations...",
+    "progress.splitting_script": "Splitting script...",
     "progress.generating_image_prompts": "Generating image prompts...",
     "progress.frame": "Frame {current}/{total}",
     "progress.frame_step": "Frame {current}/{total} - Step {step}/4: {action}",

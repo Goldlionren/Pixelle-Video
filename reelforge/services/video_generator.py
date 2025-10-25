@@ -43,23 +43,25 @@ class VideoGeneratorService:
     
     async def __call__(
         self,
-        # === Content Source (Choose ONE, mutually exclusive) ===
-        topic: Optional[str] = None,
-        content: Optional[str] = None,
+        # === Input ===
+        text: str,
         
-        # === Optional Title (works with any source) ===
+        # === Processing Mode ===
+        mode: Literal["generate", "fixed"] = "generate",
+        
+        # === Optional Title ===
         title: Optional[str] = None,
         
         # === Basic Config ===
-        n_frames: int = 5,
+        n_scenes: int = 5,  # Only used in generate mode; ignored in fixed mode
         voice_id: str = "zh-CN-YunjianNeural",
         output_path: Optional[str] = None,
         
         # === LLM Parameters ===
-        min_narration_words: int = 20,
-        max_narration_words: int = 40,
-        min_image_prompt_words: int = 50,
-        max_image_prompt_words: int = 100,
+        min_narration_words: int = 5,
+        max_narration_words: int = 20,
+        min_image_prompt_words: int = 30,
+        max_image_prompt_words: int = 60,
         
         # === Image Parameters ===
         image_width: int = 1024,
@@ -85,26 +87,33 @@ class VideoGeneratorService:
         progress_callback: Optional[Callable[[ProgressEvent], None]] = None,
     ) -> VideoGenerationResult:
         """
-        Generate short video from different content sources
+        Generate short video from text input
         
         Args:
-            topic: Topic/theme (e.g., "如何提高学习效率")
-            content: User-provided content (any length)
+            text: Text input (required)
+                  - For generate mode: topic/theme (e.g., "如何提高学习效率")
+                  - For fixed mode: complete narration script (will be split into frames)
             
-            Note: Must provide exactly ONE of: topic or content
+            mode: Processing mode (default "generate")
+                  - "generate": LLM generates narrations from topic/theme, creates n_scenes
+                  - "fixed": Split existing script into frames, preserves original text
+                  
+                  Note: In fixed mode, n_scenes is ignored (uses actual split count)
             
             title: Video title (optional)
                    - If provided, use it as the video title
-                   - If not provided, auto-generate based on source:
-                     * topic → use topic text
-                     * content → LLM extracts title from content
+                   - If not provided:
+                     * generate mode → use text as title
+                     * fixed mode → LLM generates title from script
             
-            n_frames: Number of storyboard frames (default 5)
+            n_scenes: Number of storyboard scenes (default 5)
+                      Only effective in generate mode; ignored in fixed mode
+            
             voice_id: TTS voice ID (default "zh-CN-YunjianNeural")
             output_path: Output video path (auto-generated if None)
             
-            min_narration_words: Min narration length
-            max_narration_words: Max narration length
+            min_narration_words: Min narration length (generate mode only)
+            max_narration_words: Max narration length (generate mode only)
             min_image_prompt_words: Min image prompt length
             max_image_prompt_words: Max image prompt length
             
@@ -131,66 +140,53 @@ class VideoGeneratorService:
             VideoGenerationResult with video path and metadata
         
         Examples:
-            # Generate from topic
+            # Generate mode: LLM creates narrations from topic
             >>> result = await reelforge.generate_video(
-            ...     topic="如何在信息爆炸时代保持深度思考",
-            ...     n_frames=5,
+            ...     text="如何在信息爆炸时代保持深度思考",
+            ...     mode="generate",
+            ...     n_scenes=5,
             ...     bgm_path="default"
             ... )
             
-            # Generate from user content with auto-generated title
+            # Fixed mode: Use existing script (split by paragraphs)
+            >>> script = '''大家好，今天跟你分享三个学习技巧
+            ... 
+            ... 第一个技巧是专注力训练，每天冥想10分钟
+            ... 
+            ... 第二个技巧是主动回忆，学完立即复述'''
             >>> result = await reelforge.generate_video(
-            ...     content="昨天我读了一本书，讲的是...",
-            ...     n_frames=3
+            ...     text=script,
+            ...     mode="fixed",
+            ...     title="三个学习技巧"
             ... )
             
-            # Generate from user content with custom title
+            # Fixed mode: Use existing script (split by sentences)
             >>> result = await reelforge.generate_video(
-            ...     content="买房子，第一应该看的是楼盘的整体环境...",
-            ...     title="买房风水指南",
-            ...     n_frames=5
+            ...     text="第一点是专注。第二点是复述。第三点是重复。",
+            ...     mode="fixed"
             ... )
             >>> print(result.video_path)
         """
-        # ========== Step 0: Validate parameters (mutually exclusive) ==========
-        sources = [topic, content]
-        source_count = sum(x is not None for x in sources)
-        
-        if source_count == 0:
-            raise ValueError(
-                "Must provide exactly ONE of: topic or content"
-            )
-        elif source_count > 1:
-            raise ValueError(
-                "Cannot provide multiple sources. Choose ONE of: topic or content"
-            )
-        
-        # Determine source type
-        if topic:
-            source_type = "topic"
-        else:  # content
-            source_type = "content"
+        # ========== Step 0: Process text and determine title ==========
+        logger.info(f"🚀 Starting video generation in '{mode}' mode")
+        logger.info(f"   Text length: {len(text)} chars")
         
         # Determine final title (priority: user-specified > auto-generated)
         if title:
             # User specified title, use it directly
             final_title = title
-            logger.info(f"🚀 Starting video generation from {source_type} with title: '{title}'")
+            logger.info(f"   Title: '{title}' (user-specified)")
         else:
-            # Auto-generate title based on source
-            if source_type == "topic":
-                final_title = topic
-                logger.info(f"🚀 Starting video generation from topic: '{final_title}'")
-            else:  # content
-                # Will generate title from content using LLM
-                logger.info(f"🚀 Starting video generation from content ({len(content)} chars)")
-                final_title = None  # Will be generated later
-        
-        # Generate title from content if needed (before creating output path)
-        if source_type == "content" and final_title is None:
-            self._report_progress(progress_callback, "generating_title", 0.01)
-            final_title = await self._generate_title_from_content(content)
-            logger.info(f"✅ Generated title: {final_title}")
+            # Auto-generate title based on mode
+            if mode == "generate":
+                # Use text as title (it's a topic/theme)
+                final_title = text[:20] if len(text) > 20 else text
+                logger.info(f"   Title: '{final_title}' (from text)")
+            else:  # fixed
+                # Generate title from script using LLM
+                self._report_progress(progress_callback, "generating_title", 0.01)
+                final_title = await self._generate_title_from_content(text)
+                logger.info(f"   Title: '{final_title}' (LLM-generated)")
         
         # Auto-generate output path if not provided
         if output_path is None:
@@ -204,7 +200,7 @@ class VideoGeneratorService:
         
         # Create storyboard config
         config = StoryboardConfig(
-            n_storyboard=n_frames,
+            n_storyboard=n_scenes,
             min_narration_words=min_narration_words,
             max_narration_words=max_narration_words,
             min_image_prompt_words=min_image_prompt_words,
@@ -230,24 +226,46 @@ class VideoGeneratorService:
         self.core._current_storyboard = storyboard
         
         try:
-            # ========== Step 1: Generate narrations ==========
-            self._report_progress(progress_callback, "generating_narrations", 0.05)
-            narrations = await self.core.narration_generator.generate_narrations(
-                config=config,
-                source_type=source_type,
-                content_metadata=None,  # No metadata needed for topic/content
-                topic=topic if source_type == "topic" else None,
-                content=content if source_type == "content" else None
-            )
-            logger.info(f"✅ Generated {len(narrations)} narrations")
+            # ========== Step 1: Generate/Split narrations ==========
+            if mode == "generate":
+                # Generate narrations using LLM
+                self._report_progress(progress_callback, "generating_narrations", 0.05)
+                narrations = await self.core.narration_generator.generate_narrations(
+                    config=config,
+                    source_type="topic",
+                    content_metadata=None,
+                    topic=text,
+                    content=None
+                )
+                logger.info(f"✅ Generated {len(narrations)} narrations")
+            else:  # fixed
+                # Split fixed script using LLM (preserves original text)
+                self._report_progress(progress_callback, "splitting_script", 0.05)
+                narrations = await self._split_narration_script(text, config)
+                logger.info(f"✅ Split script into {len(narrations)} segments")
+                logger.info(f"   Note: n_scenes={n_scenes} is ignored in fixed mode")
             
             # Step 2: Generate image prompts
             self._report_progress(progress_callback, "generating_image_prompts", 0.15)
+            
+            # Create progress callback wrapper for image prompt generation (15%-30% range)
+            def image_prompt_progress(completed: int, total: int, message: str):
+                # Map batch progress to 15%-30% range
+                batch_progress = completed / total if total > 0 else 0
+                overall_progress = 0.15 + (batch_progress * 0.15)  # 15% -> 30%
+                self._report_progress(
+                    progress_callback, 
+                    "generating_image_prompts", 
+                    overall_progress,
+                    extra_info=message
+                )
+            
             image_prompts = await self.core.image_prompt_generator.generate_image_prompts(
                 narrations=narrations,
                 config=config,
                 image_style_preset=image_style_preset,
-                image_style_description=image_style_description
+                image_style_description=image_style_description,
+                progress_callback=image_prompt_progress
             )
             logger.info(f"✅ Generated {len(image_prompts)} image prompts")
             
@@ -370,6 +388,169 @@ class VideoGeneratorService:
         else:
             logger.debug(f"Progress: {progress*100:.0f}% - {event_type}")
     
+    def _parse_json(self, text: str) -> dict:
+        """
+        Parse JSON from text, with fallback to extract JSON from markdown code blocks
+        
+        Args:
+            text: Text containing JSON
+            
+        Returns:
+            Parsed JSON dict
+        """
+        import json
+        import re
+        
+        # Try direct parsing first
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+        
+        # Try to extract JSON from markdown code block
+        json_pattern = r'```(?:json)?\s*([\s\S]+?)\s*```'
+        match = re.search(json_pattern, text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError:
+                pass
+        
+        # Try to find any JSON object in the text (flexible pattern for narrations)
+        json_pattern = r'\{[^{}]*"narrations"\s*:\s*\[[^\]]*\][^{}]*\}'
+        match = re.search(json_pattern, text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError:
+                pass
+        
+        # If all fails, raise error
+        raise json.JSONDecodeError("No valid JSON found", text, 0)
+    
+    async def _split_narration_script(self, script: str, config: StoryboardConfig) -> list[str]:
+        """
+        Split user-provided narration script into segments (programmatic splitting).
+        
+        Priority:
+        1. Split by major punctuation (newline, 。！？；)
+        2. If segment > max_len, split by comma (，)
+        3. If still > max_len, keep original (no force split)
+        4. Merge segments < min_len with next segment
+        
+        Args:
+            script: Fixed narration script
+            config: Storyboard configuration (for length guidelines)
+            
+        Returns:
+            List of narration segments
+        """
+        import re
+        
+        min_len = config.min_narration_words
+        max_len = config.max_narration_words
+        
+        logger.info(f"Splitting script (length: {len(script)} chars) with target: {min_len}-{max_len} chars")
+        
+        # Step 1: Split by major punctuation (newline, period, exclamation, question mark, semicolon)
+        major_delimiters = r'[\n。！？；]'
+        parts = re.split(f'({major_delimiters})', script)
+        
+        # Reconstruct sentences (text only, remove trailing punctuation)
+        sentences = []
+        for i in range(0, len(parts)-1, 2):
+            text = parts[i].strip()
+            if text:
+                sentences.append(text)
+        # Handle last part if no delimiter
+        if len(parts) % 2 == 1 and parts[-1].strip():
+            sentences.append(parts[-1].strip())
+        
+        logger.debug(f"After major split: {len(sentences)} sentences")
+        
+        # Step 2: For segments > max_len, try splitting by comma
+        final_segments = []
+        for sentence in sentences:
+            sent_len = len(sentence)
+            
+            # If within range or short, keep as is
+            if sent_len <= max_len:
+                final_segments.append(sentence)
+                continue
+            
+            # Too long: try splitting by comma
+            comma_parts = re.split(r'(，)', sentence)
+            sub_segments = []
+            current = ""
+            
+            for part in comma_parts:
+                if part == '，':
+                    continue
+                    
+                if not current:
+                    current = part
+                elif len(current + part) <= max_len:
+                    current += part
+                else:
+                    # Current segment is ready
+                    if current:
+                        sub_segments.append(current.strip())
+                    current = part
+            
+            # Add last segment
+            if current:
+                sub_segments.append(current.strip())
+            
+            # If comma splitting worked (resulted in multiple segments), use it
+            if sub_segments and len(sub_segments) > 1:
+                final_segments.extend(sub_segments)
+            else:
+                # Keep original sentence even if > max_len
+                logger.debug(f"Keeping long segment ({sent_len} chars): {sentence[:30]}...")
+                final_segments.append(sentence)
+        
+        # Step 3: Merge segments that are too short
+        merged_segments = []
+        i = 0
+        while i < len(final_segments):
+            segment = final_segments[i]
+            
+            # If too short and not the last one, try merging with next
+            if len(segment) < min_len and i < len(final_segments) - 1:
+                next_segment = final_segments[i + 1]
+                merged = segment + "，" + next_segment
+                
+                # If merged result is within max_len, use it
+                if len(merged) <= max_len:
+                    merged_segments.append(merged)
+                    i += 2  # Skip next segment
+                    continue
+            
+            # Otherwise keep as is
+            merged_segments.append(segment)
+            i += 1
+        
+        # Clean up
+        result = [s.strip() for s in merged_segments if s.strip()]
+        
+        # Log statistics
+        lengths = [len(s) for s in result]
+        logger.info(f"Script split into {len(result)} segments")
+        if lengths:
+            logger.info(f"  Min: {min(lengths)} chars, Max: {max(lengths)} chars, Avg: {sum(lengths)//len(lengths)} chars")
+            
+            in_range = sum(1 for l in lengths if min_len <= l <= max_len)
+            too_short = sum(1 for l in lengths if l < min_len)
+            too_long = sum(1 for l in lengths if l > max_len)
+            
+            logger.info(f"  In range ({min_len}-{max_len}): {in_range}/{len(result)} ({in_range*100//len(result)}%)")
+            if too_short:
+                logger.info(f"  Too short (< {min_len}): {too_short}/{len(result)} ({too_short*100//len(result)}%)")
+            if too_long:
+                logger.info(f"  Too long (> {max_len}): {too_long}/{len(result)} ({too_long*100//len(result)}%)")
+        
+        return result
+    
     async def _generate_title_from_content(self, content: str) -> str:
         """
         Generate a short, attractive title from user content using LLM
@@ -380,21 +561,10 @@ class VideoGeneratorService:
         Returns:
             Generated title (10 characters or less)
         """
-        # Take first 500 chars to avoid overly long prompts
-        content_preview = content[:500]
+        from reelforge.prompts import build_title_generation_prompt
         
-        prompt = f"""请为以下内容生成一个简短、有吸引力的标题（10字以内）。
-
-内容：
-{content_preview}
-
-要求：
-1. 简短精炼，10字以内
-2. 准确概括核心内容
-3. 有吸引力，适合作为视频标题
-4. 只输出标题文本，不要其他内容
-
-标题："""
+        # Build prompt using template
+        prompt = build_title_generation_prompt(content, max_length=500)
         
         # Call LLM to generate title
         response = await self.core.llm(

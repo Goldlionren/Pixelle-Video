@@ -400,37 +400,34 @@ def main():
         with st.container(border=True):
             st.markdown(f"**{tr('section.content_input')}**")
             
-            # Input mode selection
-            input_mode = st.radio(
-                "Input Mode",
-                [tr("input_mode.topic"), tr("input_mode.custom")],
+            # Processing mode selection
+            mode = st.radio(
+                "Processing Mode",
+                ["generate", "fixed"],
                 horizontal=True,
-                label_visibility="collapsed"
+                format_func=lambda x: tr(f"mode.{x}"),
+                label_visibility="collapsed",
+                help=tr("mode.help")
             )
             
-            topic = None
-            content = None
-            title = None
+            # Text input (unified for both modes)
+            text_placeholder = tr("input.topic_placeholder") if mode == "generate" else tr("input.content_placeholder")
+            text_height = 100 if mode == "generate" else 200
+            text_help = tr("input.text_help_generate") if mode == "generate" else tr("input.text_help_fixed")
             
-            if input_mode == tr("input_mode.topic"):
-                topic = st.text_area(
-                    tr("input.topic"),
-                    placeholder=tr("input.topic_placeholder"),
-                    height=100,
-                    help=tr("input.topic_help")
-                )
+            text = st.text_area(
+                tr("input.text"),
+                placeholder=text_placeholder,
+                height=text_height,
+                help=text_help
+            )
             
-            else:  # Custom Content
-                content = st.text_area(
-                    tr("input.content"),
-                    placeholder=tr("input.content_placeholder"),
-                    height=200,
-                    help=tr("input.content_help")
-                )
-                title = st.text_input(
-                    tr("input.title"),
-                    placeholder=tr("input.title_placeholder")
-                )
+            # Title input (optional for both modes)
+            title = st.text_input(
+                tr("input.title"),
+                placeholder=tr("input.title_placeholder"),
+                help=tr("input.title_help")
+            )
         
         # ====================================================================
         # Video Settings (moved from right column)
@@ -438,16 +435,23 @@ def main():
         with st.container(border=True):
             st.markdown(f"**{tr('video.title')}**")
             
-            # Number of frames
-            n_frames = st.slider(
-                tr("video.frames"),
-                min_value=3,
-                max_value=30,
-                value=5,
-                help=tr("video.frames_help"),
-                label_visibility="collapsed"
-            )
-            st.caption(tr("video.frames_label", n=n_frames))
+            # Number of scenes (only show in generate mode)
+            if mode == "generate":
+                n_scenes = st.slider(
+                    tr("video.frames"),
+                    min_value=3,
+                    max_value=30,
+                    value=5,
+                    help=tr("video.frames_help"),
+                    label_visibility="collapsed"
+                )
+                st.caption(tr("video.frames_label", n=n_scenes))
+                
+                st.markdown("---")
+            else:
+                # Fixed mode: n_scenes is ignored, set default value
+                n_scenes = 5
+                st.info(tr("video.frames_fixed_mode_hint"))
             
             st.markdown("---")
             
@@ -645,7 +649,7 @@ def main():
                     st.stop()
                 
                 # Validate input
-                if not topic and not content:
+                if not text:
                     st.error(tr("error.input_required"))
                     st.stop()
                 
@@ -680,6 +684,10 @@ def main():
                             # Simple events: use i18n key directly
                             message = tr(f"progress.{event.event_type}")
                         
+                        # Append extra_info if available (e.g., batch progress)
+                        if event.extra_info:
+                            message = f"{message} - {event.extra_info}"
+                        
                         status_text.text(message)
                         progress_bar.progress(min(int(event.progress * 100), 99))  # Cap at 99% until complete
                     
@@ -695,10 +703,10 @@ def main():
                         style_preset_param = style_preset
                     
                     result = run_async(reelforge.generate_video(
-                        topic=topic if topic else None,
-                        content=content if content else None,
+                        text=text,
+                        mode=mode,
                         title=title if title else None,
-                        n_frames=n_frames,
+                        n_scenes=n_scenes,
                         voice_id=voice_id,
                         image_style_preset=style_preset_param,
                         image_style_description=style_description_param,

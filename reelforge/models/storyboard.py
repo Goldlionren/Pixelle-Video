@@ -11,10 +11,10 @@ from typing import List, Optional
 class StoryboardConfig:
     """Storyboard configuration parameters"""
     n_storyboard: int = 5                      # Number of storyboard frames
-    min_narration_words: int = 30              # Min narration word count
-    max_narration_words: int = 50              # Max narration word count
-    min_image_prompt_words: int = 60           # Min image prompt word count
-    max_image_prompt_words: int = 100          # Max image prompt word count
+    min_narration_words: int = 5               # Min narration word count
+    max_narration_words: int = 20              # Max narration word count
+    min_image_prompt_words: int = 30           # Min image prompt word count
+    max_image_prompt_words: int = 60           # Max image prompt word count
     
     # Video parameters
     video_width: int = 1080                    # Video width

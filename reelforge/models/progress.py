@@ -43,6 +43,7 @@ class ProgressEvent:
     frame_total: Optional[int] = None
     step: Optional[int] = None  # 1-4 for frame processing steps
     action: Optional[str] = None  # "audio", "image", "compose", "video"
+    extra_info: Optional[str] = None  # Additional information (e.g., batch progress)
     
     def __post_init__(self):
         """Validate progress value"""

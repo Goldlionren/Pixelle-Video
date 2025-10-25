@@ -180,20 +180,10 @@ class FinalImagePromptService:
         Returns:
             Converted English image prompt suitable for image generation models
         """
+        from reelforge.prompts import build_style_conversion_prompt
         
-        llm_prompt = f"""Convert this style description into a detailed image generation prompt for Stable Diffusion/FLUX:
-
-Style Description: {description}
-
-Requirements:
-- Focus on visual elements, colors, lighting, mood, atmosphere
-- Be specific and detailed
-- Use professional photography/art terminology
-- Output ONLY the prompt in English (no explanations)
-- Keep it under 100 words
-- Use comma-separated descriptive phrases
-
-Image Prompt:"""
+        # Build prompt using template
+        llm_prompt = build_style_conversion_prompt(description)
         
         style_prompt = await self.core.llm(llm_prompt)
         
