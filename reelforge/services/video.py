@@ -345,33 +345,38 @@ class VideoService:
         logger.info("Creating video from image and audio")
         
         try:
+            # Get audio duration to ensure exact video duration match
+            probe = ffmpeg.probe(audio)
+            audio_duration = float(probe['format']['duration'])
+            logger.debug(f"Audio duration: {audio_duration:.3f}s")
+            
             # Input image with loop (loop=1 means loop indefinitely)
             # Use framerate to set input framerate
             input_image = ffmpeg.input(image, loop=1, framerate=fps)
             input_audio = ffmpeg.input(audio)
             
             # Combine image and audio
-            # Use -shortest to match audio duration
+            # Use -t to explicitly set video duration = audio duration
             (
                 ffmpeg
                 .output(
                     input_image,
                     input_audio,
                     output,
+                    t=audio_duration,  # Force video duration to match audio exactly
                     vcodec='libx264',
                     acodec='aac',
                     pix_fmt='yuv420p',
                     audio_bitrate='192k',
                     preset='medium',
                     crf=23,
-                    shortest=None,  # Duration = shortest input (audio)
                     **{'b:v': '2M'}  # Video bitrate
                 )
                 .overwrite_output()
                 .run(capture_stdout=True, capture_stderr=True)
             )
             
-            logger.success(f"Video created from image: {output}")
+            logger.success(f"Video created from image: {output} (duration: {audio_duration:.3f}s)")
             return output
         except ffmpeg.Error as e:
             error_msg = e.stderr.decode() if e.stderr else str(e)
