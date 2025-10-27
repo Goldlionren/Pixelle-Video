@@ -158,6 +158,32 @@ async def edge_tts(
         raise RuntimeError("Edge TTS failed without error (unexpected)")
 
 
+def get_audio_duration(audio_path: str) -> float:
+    """
+    Get audio file duration in seconds
+    
+    Args:
+        audio_path: Path to audio file
+    
+    Returns:
+        Duration in seconds
+    """
+    try:
+        # Try using ffmpeg-python
+        import ffmpeg
+        probe = ffmpeg.probe(audio_path)
+        duration = float(probe['format']['duration'])
+        return duration
+    except Exception as e:
+        logger.warning(f"Failed to get audio duration: {e}, using estimate")
+        # Fallback: estimate based on file size (very rough)
+        import os
+        file_size = os.path.getsize(audio_path)
+        # Assume ~16kbps for MP3, so 2KB per second
+        estimated_duration = file_size / 2000
+        return max(1.0, estimated_duration)  # At least 1 second
+
+
 async def list_voices(locale: str = None, retry_count: int = _RETRY_COUNT, retry_delay: float = _RETRY_DELAY) -> list[str]:
     """
     List all available voices for Edge TTS

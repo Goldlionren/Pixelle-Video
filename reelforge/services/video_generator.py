@@ -56,6 +56,7 @@ class VideoGeneratorService:
         n_scenes: int = 5,  # Only used in generate mode; ignored in fixed mode
         voice_id: str = "zh-CN-YunjianNeural",
         output_path: Optional[str] = None,
+        use_uuid_filename: bool = False,  # Use UUID instead of timestamp for filename
         
         # === LLM Parameters ===
         min_narration_words: int = 5,
@@ -194,10 +195,17 @@ class VideoGeneratorService:
         
         # Auto-generate output path if not provided
         if output_path is None:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            # Use first 10 chars of final_title for filename
-            safe_name = final_title[:10].replace('/', '_').replace(' ', '_')
-            output_path = f"output/{timestamp}_{safe_name}.mp4"
+            if use_uuid_filename:
+                # API mode: use UUID for filename
+                import uuid
+                filename = str(uuid.uuid4()).replace('-', '')
+                output_path = f"output/{filename}.mp4"
+            else:
+                # Default mode: use timestamp + title
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                # Use first 10 chars of final_title for filename
+                safe_name = final_title[:10].replace('/', '_').replace(' ', '_')
+                output_path = f"output/{timestamp}_{safe_name}.mp4"
         
         # Ensure output directory exists
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
