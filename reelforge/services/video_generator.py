@@ -56,7 +56,6 @@ class VideoGeneratorService:
         n_scenes: int = 5,  # Only used in generate mode; ignored in fixed mode
         voice_id: str = "zh-CN-YunjianNeural",
         output_path: Optional[str] = None,
-        use_uuid_filename: bool = False,  # Use UUID instead of timestamp for filename
         
         # === LLM Parameters ===
         min_narration_words: int = 5,
@@ -186,25 +185,31 @@ class VideoGeneratorService:
                 final_title = await self.core.title_generator(text, strategy="llm")
                 logger.info(f"   Title: '{final_title}' (LLM-generated)")
         
-        # Auto-generate output path if not provided
-        if output_path is None:
-            if use_uuid_filename:
-                # API mode: use UUID for filename
-                import uuid
-                filename = str(uuid.uuid4()).replace('-', '')
-                output_path = f"output/{filename}.mp4"
-            else:
-                # Default mode: use timestamp + title
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                # Use first 10 chars of final_title for filename
-                safe_name = final_title[:10].replace('/', '_').replace(' ', '_')
-                output_path = f"output/{timestamp}_{safe_name}.mp4"
+        # ========== Step 0.5: Create isolated task directory ==========
+        from reelforge.utils.os_util import (
+            create_task_output_dir, 
+            get_task_final_video_path
+        )
         
-        # Ensure output directory exists
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        # Create isolated task directory for this video generation
+        task_dir, task_id = create_task_output_dir()
+        logger.info(f"📁 Task directory created: {task_dir}")
+        logger.info(f"   Task ID: {task_id}")
+        
+        # Determine final video path
+        user_specified_output = None
+        if output_path is None:
+            # Use standardized path: output/{task_id}/final.mp4
+            output_path = get_task_final_video_path(task_id)
+        else:
+            # User specified custom path: save it and use task path for generation
+            user_specified_output = output_path
+            output_path = get_task_final_video_path(task_id)
+            logger.info(f"   Will copy final video to: {user_specified_output}")
         
         # Create storyboard config
         config = StoryboardConfig(
+            task_id=task_id,  # Pass task_id for file isolation
             n_storyboard=n_scenes,
             min_narration_words=min_narration_words,
             max_narration_words=max_narration_words,
@@ -353,6 +358,16 @@ class VideoGeneratorService:
             
             storyboard.final_video_path = final_video_path
             storyboard.completed_at = datetime.now()
+            
+            # Copy to user-specified path if provided
+            if user_specified_output:
+                import shutil
+                Path(user_specified_output).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(final_video_path, user_specified_output)
+                logger.info(f"📹 Final video copied to: {user_specified_output}")
+                # Use user-specified path in result
+                final_video_path = user_specified_output
+                storyboard.final_video_path = user_specified_output
             
             logger.success(f"🎬 Video generation completed: {final_video_path}")
             

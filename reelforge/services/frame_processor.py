@@ -11,7 +11,6 @@ from loguru import logger
 
 from reelforge.models.progress import ProgressEvent
 from reelforge.models.storyboard import Storyboard, StoryboardFrame, StoryboardConfig
-from reelforge.utils.os_util import get_temp_path
 
 
 class FrameProcessor:
@@ -121,11 +120,16 @@ class FrameProcessor:
         """Step 1: Generate audio using TTS"""
         logger.debug(f"  1/4: Generating audio for frame {frame.index}...")
         
-        # Call TTS
+        # Generate output path using task_id
+        from reelforge.utils.os_util import get_task_frame_path
+        output_path = get_task_frame_path(config.task_id, frame.index, "audio")
+        
+        # Call TTS with specific output path
         audio_path = await self.core.tts(
             text=frame.narration,
             voice=config.voice_id,
             rate="+20%",
+            output_path=output_path,
         )
         
         frame.audio_path = audio_path
@@ -151,8 +155,8 @@ class FrameProcessor:
             height=config.image_height
         )
         
-        # Download image to local
-        local_path = await self._download_image(image_url, frame.index)
+        # Download image to local (pass task_id)
+        local_path = await self._download_image(image_url, frame.index, config.task_id)
         frame.image_path = local_path
         
         logger.debug(f"  ✓ Image generated: {local_path}")
@@ -166,7 +170,9 @@ class FrameProcessor:
         """Step 3: Compose frame with subtitle using HTML template"""
         logger.debug(f"  3/4: Composing frame {frame.index}...")
         
-        output_path = get_temp_path(f"frame_{frame.index}_composed.png")
+        # Generate output path using task_id
+        from reelforge.utils.os_util import get_task_frame_path
+        output_path = get_task_frame_path(config.task_id, frame.index, "composed")
         
         # Use HTML template to compose frame
         composed_path = await self._compose_frame_html(frame, storyboard, config, output_path)
@@ -219,7 +225,8 @@ class FrameProcessor:
             image=frame.image_path,
             ext=ext,
             width=config.video_width,
-            height=config.video_height
+            height=config.video_height,
+            output_path=output_path
         )
         
         return composed_path
@@ -232,7 +239,9 @@ class FrameProcessor:
         """Step 4: Create video segment from image + audio"""
         logger.debug(f"  4/4: Creating video segment for frame {frame.index}...")
         
-        output_path = get_temp_path(f"frame_{frame.index}_segment.mp4")
+        # Generate output path using task_id
+        from reelforge.utils.os_util import get_task_frame_path
+        output_path = get_task_frame_path(config.task_id, frame.index, "segment")
         
         # Call video compositor to create video from image + audio
         from reelforge.services.video import VideoService
@@ -266,9 +275,10 @@ class FrameProcessor:
             estimated_duration = file_size / 2000
             return max(1.0, estimated_duration)  # At least 1 second
     
-    async def _download_image(self, url: str, frame_index: int) -> str:
+    async def _download_image(self, url: str, frame_index: int, task_id: str) -> str:
         """Download image from URL to local file"""
-        output_path = get_temp_path(f"frame_{frame_index}_image.png")
+        from reelforge.utils.os_util import get_task_frame_path
+        output_path = get_task_frame_path(task_id, frame_index, "image")
         
         async with httpx.AsyncClient() as client:
             response = await client.get(url)

@@ -10,6 +10,10 @@ from typing import List, Optional
 @dataclass
 class StoryboardConfig:
     """Storyboard configuration parameters"""
+    
+    # Task isolation
+    task_id: Optional[str] = None              # Task ID for file isolation (auto-generated if None)
+    
     n_storyboard: int = 5                      # Number of storyboard frames
     min_narration_words: int = 5               # Min narration word count
     max_narration_words: int = 20              # Max narration word count

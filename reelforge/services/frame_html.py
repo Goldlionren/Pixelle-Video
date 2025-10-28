@@ -198,7 +198,8 @@ class HTMLFrameGenerator:
         image: str,
         ext: Optional[Dict[str, Any]] = None,
         width: int = 1080,
-        height: int = 1920
+        height: int = 1920,
+        output_path: Optional[str] = None
     ) -> str:
         """
         Generate frame from HTML template
@@ -210,6 +211,7 @@ class HTMLFrameGenerator:
             ext: Additional data (content_title, content_author, etc.)
             width: Frame width in pixels
             height: Frame height in pixels
+            output_path: Custom output path (auto-generated if None)
         
         Returns:
             Path to generated frame image
@@ -248,10 +250,21 @@ class HTMLFrameGenerator:
             placeholder = f"{{{{{key}}}}}"
             html = html.replace(placeholder, str(value) if value is not None else "")
         
-        # Generate unique output path
-        from reelforge.utils.os_util import get_output_path
-        output_filename = f"frame_{uuid.uuid4().hex[:16]}.png"
-        output_path = get_output_path(output_filename)
+        # Use provided output path or auto-generate
+        if output_path is None:
+            # Fallback: auto-generate (for backward compatibility)
+            from reelforge.utils.os_util import get_output_path
+            output_filename = f"frame_{uuid.uuid4().hex[:16]}.png"
+            output_path = get_output_path(output_filename)
+        else:
+            # Ensure parent directory exists
+            import os
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # Extract filename from output_path for html2image
+        import os
+        output_filename = os.path.basename(output_path)
+        output_dir = os.path.dirname(output_path)
         
         # Ensure Html2Image is initialized
         self._ensure_hti(width, height)
@@ -265,11 +278,11 @@ class HTMLFrameGenerator:
                 size=(width, height)
             )
             
-            # html2image saves to current directory by default, move to output
-            import os
+            # html2image saves to current directory by default, move to target directory
             import shutil
-            if os.path.exists(output_filename):
-                shutil.move(output_filename, output_path)
+            temp_file = os.path.join(os.getcwd(), output_filename)
+            if os.path.exists(temp_file) and temp_file != output_path:
+                shutil.move(temp_file, output_path)
             
             logger.info(f"✅ Frame generated: {output_path}")
             return output_path

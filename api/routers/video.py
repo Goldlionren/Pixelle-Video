@@ -58,7 +58,6 @@ async def generate_video_sync(
             title=request_body.title,
             n_scenes=request_body.n_scenes,
             voice_id=request_body.voice_id,
-            use_uuid_filename=True,  # API mode: use UUID filename
             min_narration_words=request_body.min_narration_words,
             max_narration_words=request_body.max_narration_words,
             min_image_prompt_words=request_body.min_image_prompt_words,
@@ -133,7 +132,6 @@ async def generate_video_async(
                 title=request_body.title,
                 n_scenes=request_body.n_scenes,
                 voice_id=request_body.voice_id,
-                use_uuid_filename=True,  # API mode: use UUID filename
                 min_narration_words=request_body.min_narration_words,
                 max_narration_words=request_body.max_narration_words,
                 min_image_prompt_words=request_body.min_image_prompt_words,
