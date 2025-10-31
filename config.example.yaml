@@ -35,4 +35,4 @@ comfyui:
     default_workflow: runninghub/image_flux.json
     
     # Image prompt prefix (optional)
-    prompt_prefix: "Pure white background, minimalist illustration, matchstick figure style, black and white line drawing, simple clean lines"
+    prompt_prefix: "Minimalist black-and-white stick figure illustration on a plain white background, clean thin lines, simple sketch style"
