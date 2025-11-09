@@ -81,7 +81,7 @@
     "template.modern": "Modern",
     "template.neon": "Neon",
     "template.what": "Controls the visual layout and design style of each frame (title, text, image arrangement)",
-    "template.how": "Place .html template files in templates/SIZE/ directories (e.g., templates/1080x1920/). Templates are automatically grouped by size. Custom CSS styles are supported",
+    "template.how": "Place .html template files in templates/SIZE/ directories (e.g., templates/1080x1920/). Templates are automatically grouped by size. Custom CSS styles are supported.\n\n**Note**\n\nAt least one of the following browsers must be installed on your computer for proper operation:\n1. Google Chrome (Windows, macOS)\n2. Chromium Browser (Linux)\n3. Microsoft Edge",
     "template.size_info": "Template Size",
     
     "orientation.portrait": "Portrait",

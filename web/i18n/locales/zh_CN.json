@@ -81,7 +81,7 @@
     "template.modern": "现代",
     "template.neon": "霓虹",
     "template.what": "控制视频每一帧的视觉布局和设计风格（标题、文本、图片的排版样式）",
-    "template.how": "将 .html 模板文件放入 templates/尺寸/ 目录（如 templates/1080x1920/），系统会自动按尺寸分组。支持自定义 CSS 样式",
+    "template.how": "将 .html 模板文件放入 templates/尺寸/ 目录（如 templates/1080x1920/），系统会自动按尺寸分组。支持自定义 CSS 样式。\n\n**注意**\n\n您的计算机上必须安装以下至少一种浏览器才能正常运行：\n1. Google Chrome（Windows、MacOS）\n2. Chromium 浏览器（Linux）\n3. Microsoft Edge",
     "template.size_info": "模板尺寸",
     
     "orientation.portrait": "竖屏",
