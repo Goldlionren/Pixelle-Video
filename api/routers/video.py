@@ -73,8 +73,7 @@ async def generate_video_sync(
             "max_narration_words": request_body.max_narration_words,
             "min_image_prompt_words": request_body.min_image_prompt_words,
             "max_image_prompt_words": request_body.max_image_prompt_words,
-            "image_width": request_body.image_width,
-            "image_height": request_body.image_height,
+            # Note: image_width and image_height are now auto-determined from template
             "image_workflow": request_body.image_workflow,
             "video_fps": request_body.video_fps,
             "frame_template": request_body.frame_template,
@@ -161,8 +160,7 @@ async def generate_video_async(
                 "max_narration_words": request_body.max_narration_words,
                 "min_image_prompt_words": request_body.min_image_prompt_words,
                 "max_image_prompt_words": request_body.max_image_prompt_words,
-                "image_width": request_body.image_width,
-                "image_height": request_body.image_height,
+                # Note: image_width and image_height are now auto-determined from template
                 "image_workflow": request_body.image_workflow,
                 "video_fps": request_body.video_fps,
                 "frame_template": request_body.frame_template,

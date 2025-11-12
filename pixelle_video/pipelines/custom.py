@@ -92,8 +92,7 @@ class CustomPipeline(BasePipeline):
         ref_audio: Optional[str] = None,
         
         image_workflow: Optional[str] = None,
-        image_width: int = 1024,
-        image_height: int = 1024,
+        # Note: image_width and image_height are now auto-determined from template
         
         frame_template: Optional[str] = None,
         video_fps: int = 30,
@@ -160,6 +159,10 @@ class CustomPipeline(BasePipeline):
         template_path = resolve_template_path(frame_template)
         generator = HTMLFrameGenerator(template_path)
         template_requires_image = generator.requires_image()
+        
+        # Read media size from template meta tags
+        image_width, image_height = generator.get_media_size()
+        logger.info(f"📐 Media size from template: {image_width}x{image_height}")
         
         if template_requires_image:
             logger.info(f"📸 Template requires image generation")

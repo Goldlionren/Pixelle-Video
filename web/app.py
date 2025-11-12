@@ -782,6 +782,11 @@ def main():
             generator_for_params = HTMLFrameGenerator(template_path_for_params)
             custom_params_for_video = generator_for_params.parse_template_parameters()
             
+            # Get media size from template (for image/video generation)
+            media_width, media_height = generator_for_params.get_media_size()
+            st.session_state['template_media_width'] = media_width
+            st.session_state['template_media_height'] = media_height
+            
             # Detect template media type
             from pathlib import Path
             template_name = Path(frame_template).name
@@ -1023,43 +1028,18 @@ def main():
                 else:
                     workflow_key = "runninghub/image_flux.json"  # fallback
             
+                # Get media size from template
+                image_width = st.session_state.get('template_media_width', 1024)
+                image_height = st.session_state.get('template_media_height', 1024)
+                
+                # Display media size info (read-only)
+                if template_media_type == "video":
+                    size_info_text = tr('style.video_size_info', width=image_width, height=image_height)
+                else:
+                    size_info_text = tr('style.image_size_info', width=image_width, height=image_height)
+                st.info(f"📐 {size_info_text}")
             
-                # 2. Media size input
-                col1, col2 = st.columns(2)
-                with col1:
-                    if template_media_type == "video":
-                        width_label = tr('style.video_width')
-                        width_help = tr('style.video_width_help')
-                    else:
-                        width_label = tr('style.image_width')
-                        width_help = tr('style.image_width_help')
-                    
-                    image_width = st.number_input(
-                        width_label,
-                        min_value=128,
-                        value=1024,
-                        step=1,
-                        label_visibility="visible",
-                        help=width_help
-                    )
-                with col2:
-                    if template_media_type == "video":
-                        height_label = tr('style.video_height')
-                        height_help = tr('style.video_height_help')
-                    else:
-                        height_label = tr('style.image_height')
-                        height_help = tr('style.image_height_help')
-                    
-                    image_height = st.number_input(
-                        height_label,
-                        min_value=128,
-                        value=1024,
-                        step=1,
-                        label_visibility="visible",
-                        help=height_help
-                    )
-            
-                # 3. Prompt prefix input
+                # Prompt prefix input
                 # Get current prompt_prefix from config
                 current_prefix = comfyui_config["image"]["prompt_prefix"]
             
@@ -1152,10 +1132,12 @@ def main():
                 st.info("ℹ️ " + tr("image.not_required"))
                 st.caption(tr("image.not_required_hint"))
                 
+                # Get media size from template (even though not used, for consistency)
+                image_width = st.session_state.get('template_media_width', 1024)
+                image_height = st.session_state.get('template_media_height', 1024)
+                
                 # Set default values for later use
                 workflow_key = None
-                image_width = 1024
-                image_height = 1024
                 prompt_prefix = ""
         
 
@@ -1225,14 +1207,13 @@ def main():
                         progress_bar.progress(min(int(event.progress * 100), 99))  # Cap at 99% until complete
                     
                     # Generate video (directly pass parameters)
+                    # Note: image_width and image_height are now auto-determined from template
                     video_params = {
                         "text": text,
                         "mode": mode,
                         "title": title if title else None,
                         "n_scenes": n_scenes,
                         "image_workflow": workflow_key,
-                        "image_width": int(image_width),
-                        "image_height": int(image_height),
                         "frame_template": frame_template,
                         "prompt_prefix": prompt_prefix,
                         "bgm_path": bgm_path,

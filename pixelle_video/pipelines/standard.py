@@ -94,8 +94,7 @@ class StandardPipeline(BasePipeline):
         max_image_prompt_words: int = 60,
         
         # === Image Parameters ===
-        image_width: int = 1024,
-        image_height: int = 1024,
+        # Note: image_width and image_height are now auto-determined from template meta tags
         image_workflow: Optional[str] = None,
         
         # === Video Parameters ===
@@ -151,9 +150,8 @@ class StandardPipeline(BasePipeline):
             min_image_prompt_words: Min image prompt length
             max_image_prompt_words: Max image prompt length
             
-            image_width: Generated image width (default 1024)
-            image_height: Generated image height (default 1024)
             image_workflow: Image workflow filename (e.g., "image_flux.json", None = use default)
+                           Note: Image/video size is now auto-determined from template meta tags
             
             video_fps: Video frame rate (default 30)
             
@@ -238,6 +236,16 @@ class StandardPipeline(BasePipeline):
         if frame_template is None:
             template_config = self.core.config.get("template", {})
             frame_template = template_config.get("default_template", "1080x1920/default.html")
+        
+        # Read media size from template meta tags
+        from pixelle_video.services.frame_html import HTMLFrameGenerator
+        from pixelle_video.utils.template_util import resolve_template_path
+        
+        template_path = resolve_template_path(frame_template)
+        temp_generator = HTMLFrameGenerator(template_path)
+        image_width, image_height = temp_generator.get_media_size()
+        
+        logger.info(f"📐 Media size from template: {image_width}x{image_height}")
         
         # Create storyboard config
         config = StoryboardConfig(

@@ -141,6 +141,58 @@ class HTMLFrameGenerator:
         logger.debug(f"Template loaded: {len(content)} chars")
         return content
     
+    def _parse_media_size_from_meta(self) -> tuple[Optional[int], Optional[int]]:
+        """
+        Parse media size from meta tags in template
+        
+        Looks for meta tags:
+        - <meta name="template:media-width" content="1024">
+        - <meta name="template:media-height" content="1024">
+        
+        Returns:
+            Tuple of (width, height) or (None, None) if not found
+        """
+        from bs4 import BeautifulSoup
+        
+        try:
+            soup = BeautifulSoup(self.template, 'html.parser')
+            
+            # Find width and height meta tags
+            width_meta = soup.find('meta', attrs={'name': 'template:media-width'})
+            height_meta = soup.find('meta', attrs={'name': 'template:media-height'})
+            
+            if width_meta and height_meta:
+                width = int(width_meta.get('content', 0))
+                height = int(height_meta.get('content', 0))
+                
+                if width > 0 and height > 0:
+                    logger.debug(f"Found media size in meta tags: {width}x{height}")
+                    return width, height
+            
+            return None, None
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse media size from meta tags: {e}")
+            return None, None
+    
+    def get_media_size(self) -> tuple[int, int]:
+        """
+        Get media size for image/video generation
+        
+        Returns media size specified in template meta tags.
+        
+        Returns:
+            Tuple of (width, height)
+        """
+        media_width, media_height = self._parse_media_size_from_meta()
+        
+        if media_width and media_height:
+            return media_width, media_height
+        
+        # Fallback to default if not specified (should not happen with properly configured templates)
+        logger.warning(f"No media size meta tags found in template {self.template_path}, using fallback 1024x1024")
+        return 1024, 1024
+    
     def parse_template_parameters(self) -> Dict[str, Dict[str, Any]]:
         """
         Parse custom parameters from HTML template

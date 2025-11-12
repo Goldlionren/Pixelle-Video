@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="template:media-width" content="512">
+    <meta name="template:media-height" content="288">
+    <style>
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            font-family: 'PingFang SC', 'Source Han Sans', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            /* background-color: #000; */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* 主容器 - 居中并包含所有内容 */
+        .main-container {
+            position: relative;
+            width: 1080px;
+            height: 1920px;
+        }
+        
+        /* Background image layer (customizable using <img> tag) */
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        /* Video overlay - 相对于main-container居中 */
+        .video-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1080px;
+            height: 607px;
+            /* background: #f00; */
+            z-index: 1;
+        }
+        
+        /* Title section - positioned above video */
+        .video-title-wrapper {
+            position: absolute;
+            top: calc(50% - 607px / 2 - 130px);
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 900px;
+            width: 900px;
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .video-title {
+            font-size: 72px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.3;
+            letter-spacing: 3px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+        
+        /* 字幕区域 - 对齐视频底部 */
+        .content {
+            position: absolute;
+            bottom: calc(50% - 607px / 2 + 0px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            z-index: 4;
+        }
+        
+        .text {
+            font-size: 40px;
+            color: #ffffff;
+            text-align: center;
+            line-height: 1.6;
+            font-weight: 500;
+            text-shadow: 
+                2px 2px 4px rgba(0, 0, 0, 0.9),
+                0 0 8px rgba(0, 0, 0, 0.8),
+                0 0 16px rgba(0, 0, 0, 0.6);
+            padding: 10px 0px;
+            /* background-color: aqua; */
+        }
+        
+        /* Footer - positioned below video */
+        .footer {
+            position: absolute;
+            top: calc(50% + 607px / 2 + 50px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 40px;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 2;
+        }
+        
+        .author-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .author {
+            font-size: 32px;
+            font-weight: 600;
+            color: #ffffff;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .author-desc {
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 400;
+        }
+        
+        .logo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- 主容器 - 所有元素都在这里面，相对于video-overlay定位 -->
+    <div class="main-container">
+        <!-- Background image layer (customizable via background parameter) -->
+        <div class="background-image">
+            
+        </div>
+        
+        <!-- Video overlay - 居中参考点 -->
+        <div class="video-overlay"></div>
+        
+        <!-- Video title - positioned above video -->
+        <div class="video-title-wrapper">
+            <div class="video-title">{{title}}</div>
+        </div>
+        
+        <!-- 字幕区域 - 独立定位在视频底部 -->
+        <div class="content">
+            <div class="text">{{text}}</div>
+        </div>
+        
+        <!-- Footer - positioned below video -->
+        <div class="footer">
+            <div class="author-section">
+                <div class="author">{{author=@Pixelle.AI}}</div>
+                <div class="author-desc">{{describe=Open Source Omnimodal AI Creative Agent}}</div>
+            </div>
+            <div class="logo-section">
+                <div class="logo">{{brand=Pixelle-Video}}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -224,20 +224,43 @@ class VideoService:
                    -map "[v]" -map "[a]" output.mp4
         """
         try:
-            inputs = [ffmpeg.input(v) for v in videos]
-            (
-                ffmpeg
-                .concat(*inputs, v=1, a=1)
-                .output(output)
-                .overwrite_output()
-                .run(capture_stdout=True, capture_stderr=True)
+            # Build filter_complex string manually
+            n = len(videos)
+            
+            # Build input stream labels: [0:v][0:a][1:v][1:a]...
+            stream_spec = "".join([f"[{i}:v][{i}:a]" for i in range(n)])
+            filter_complex = f"{stream_spec}concat=n={n}:v=1:a=1[v][a]"
+            
+            # Build ffmpeg command
+            cmd = ['ffmpeg']
+            for video in videos:
+                cmd.extend(['-i', video])
+            cmd.extend([
+                '-filter_complex', filter_complex,
+                '-map', '[v]',
+                '-map', '[a]',
+                '-y',  # Overwrite output
+                output
+            ])
+            
+            # Run command
+            import subprocess
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True
             )
+            
             logger.success(f"Videos concatenated successfully: {output}")
             return output
-        except ffmpeg.Error as e:
-            error_msg = e.stderr.decode() if e.stderr else str(e)
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr if e.stderr else str(e)
             logger.error(f"FFmpeg concat filter error: {error_msg}")
             raise RuntimeError(f"Failed to concatenate videos: {error_msg}")
+        except Exception as e:
+            logger.error(f"Concatenation error: {e}")
+            raise RuntimeError(f"Failed to concatenate videos: {e}")
     
     def _get_video_duration(self, video: str) -> float:
         """Get video duration in seconds"""
@@ -382,9 +405,16 @@ class VideoService:
                 # Concatenate original video with black padding
                 video_stream = ffmpeg.concat(video_stream, black_input.video, v=1, a=0)
         
-        # Prepare audio stream
+        # Prepare audio stream (pad if needed to match target duration)
         input_audio = ffmpeg.input(audio)
         audio_stream = input_audio.audio.filter('volume', audio_volume)
+        
+        # Pad audio with silence if video is longer
+        if video_duration > audio_duration:
+            pad_duration = video_duration - audio_duration
+            logger.info(f"Video is longer, padding audio with {pad_duration:.2f}s silence")
+            # Use apad to add silence at the end
+            audio_stream = audio_stream.filter('apad', whole_dur=target_duration)
         
         if not video_has_audio:
             logger.info(f"Video has no audio stream, adding audio track")
@@ -398,8 +428,7 @@ class VideoService:
                         output,
                         vcodec='libx264',  # Re-encode video if padded
                         acodec='aac',
-                        audio_bitrate='192k',
-                        t=target_duration  # Trim to target duration
+                        audio_bitrate='192k'
                     )
                     .overwrite_output()
                     .run(capture_stdout=True, capture_stderr=True)
@@ -426,8 +455,7 @@ class VideoService:
                         output,
                         vcodec='libx264',  # Re-encode video if padded
                         acodec='aac',
-                        audio_bitrate='192k',
-                        t=target_duration  # Trim to target duration
+                        audio_bitrate='192k'
                     )
                     .overwrite_output()
                     .run(capture_stdout=True, capture_stderr=True)
@@ -452,8 +480,7 @@ class VideoService:
                         output,
                         vcodec='libx264',  # Re-encode video if padded
                         acodec='aac',
-                        audio_bitrate='192k',
-                        t=target_duration  # Trim to target duration
+                        audio_bitrate='192k'
                     )
                     .overwrite_output()
                     .run(capture_stdout=True, capture_stderr=True)
