@@ -50,14 +50,14 @@ COPY pixelle_video ./pixelle_video
 
 # Install Python dependencies using uv with configurable index URL
 # Auto-select China mirror when USE_CN_MIRROR=true and UV_INDEX_URL is default
-# Set longer timeout and use --index-url parameter for proper mirror usage
-# Note: UV_INDEX_URL is deprecated, use UV_DEFAULT_INDEX instead
+# Set longer timeout and use --default-index parameter to replace PyPI
+# Note: --default-index replaces PyPI as the default source
 RUN if [ "$USE_CN_MIRROR" = "true" ] && [ "$UV_INDEX_URL" = "https://pypi.tuna.tsinghua.edu.cn/simple" ]; then \
         export UV_HTTP_TIMEOUT=300 && \
-        uv sync --frozen --no-dev --index-url https://pypi.tuna.tsinghua.edu.cn/simple; \
+        uv sync --frozen --no-dev --default-index https://pypi.tuna.tsinghua.edu.cn/simple; \
     else \
         export UV_HTTP_TIMEOUT=300 && \
-        uv sync --frozen --no-dev --index-url $UV_INDEX_URL; \
+        uv sync --frozen --no-dev --default-index $UV_INDEX_URL; \
     fi
 
 # Copy rest of application code
