@@ -3,7 +3,7 @@
 <p align="center"><a href="README_EN.md">English</a> | <b>中文</b></p>
 
 <p align="center">
-  <a href="https://www.bilibili.com/video/BV1QHC7BVEq7" target="_blank"><img src="https://img.shields.io/badge/🎥 视频教程-EA4C89" alt="视频教程"></a>
+  <a href="https://www.bilibili.com/video/BV1WzyGBnEVp/?vd_source=e7e7d4ca8db9a18c80f17a24a6582fca" target="_blank"><img src="https://img.shields.io/badge/🎥 视频教程-EA4C89" alt="视频教程"></a>
   <a href="https://aidc-ai.github.io/Pixelle-Video/zh" target="_blank"><img src="https://img.shields.io/badge/📘 使用文档-4A90E2" alt="使用文档"></a>
   <a href="https://github.com/AIDC-AI/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video.svg" alt="Stargazers"></a>
   <a href="https://github.com/AIDC-AI/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/AIDC-AI/Pixelle-Video.svg" alt="Issues"></a>
@@ -354,6 +354,15 @@ Pixelle-Video 的设计受到以下优秀开源项目的启发：
 - [ComfyKit](https://github.com/puke3615/ComfyKit) - ComfyUI 工作流封装库
 
 感谢这些项目的开源精神！🙏
+
+
+## 💬 社区交流
+
+扫描下方二维码加入我们的社区，获取最新动态和技术支持：
+
+| 微信群 | Discord 社区 |
+| ---- | ---- |
+| ![微信群](docs/wechat.png) | ![Discord 社区](docs/discord.png) |
 
 
 ## 📢 反馈与支持

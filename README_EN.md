@@ -3,7 +3,7 @@
 <p align="center"><b>English</b> | <a href="README.md">中文</a></p>
 
 <p align="center">
-  <a href="https://www.bilibili.com/video/BV1QHC7BVEq7" target="_blank"><img src="https://img.shields.io/badge/🎥 Video%20Tutorial-EA4C89" alt="Video Tutorial"></a>
+  <a href="https://www.youtube.com/watch?v=uUkx-lRxLjc" target="_blank"><img src="https://img.shields.io/badge/🎥 Video%20Tutorial-EA4C89" alt="Video Tutorial"></a>
   <a href="https://aidc-ai.github.io/Pixelle-Video" target="_blank"><img src="https://img.shields.io/badge/📘 Documentation-4A90E2" alt="Documentation"></a>
   <a href="https://github.com/AIDC-AI/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video.svg" alt="Stargazers"></a>
   <a href="https://github.com/AIDC-AI/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/AIDC-AI/Pixelle-Video.svg" alt="Issues"></a>
@@ -353,6 +353,15 @@ Pixelle-Video design is inspired by the following excellent open-source projects
 - [ComfyKit](https://github.com/puke3615/ComfyKit) - ComfyUI workflow wrapper library
 
 Thanks for the open-source spirit of these projects! 🙏
+
+
+## 💬 Community
+
+Scan the QR codes below to join our communities for latest updates and technical support:
+
+| Discord Community | WeChat Group |
+| ---- | ---- |
+| ![Discord Community](docs/discord.png) | ![WeChat Group](docs/wechat.png) |
 
 
 ## 📢 Feedback and Support
