@@ -153,6 +153,14 @@
     ![excerpt](../../images/1080x1920/excerpt.jpg)
     
     图文摘抄，适合图文摘抄，名人名言
+
+-   **Health Preservation**
+
+    ---
+
+    ![health_preservation](../../images/1080x1920/health_preservation.jpg)
+    
+    养生窍门，适合养生科普内容
 </div>
 
 ---

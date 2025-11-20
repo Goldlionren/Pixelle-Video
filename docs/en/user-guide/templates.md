@@ -153,6 +153,14 @@ Suitable for TikTok, Kuaishou, Xiaohongshu, and other short video platforms.
     ![excerpt](../../images/1080x1920/excerpt.jpg)
     
     Excerpt style, suitable for quotes and book excerpts
+
+-   **Health Preservation**
+
+    ---
+
+    ![health_preservation](../../images/1080x1920/health_preservation.jpg)
+    
+    Health preserving tips, suitable for wellness explainers.
 </div>
 
 ---
