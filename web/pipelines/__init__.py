@@ -25,7 +25,7 @@ from web.pipelines.base import (
 
 # Import all pipeline UI modules to ensure they register themselves
 from web.pipelines import standard
-from web.pipelines import demo
+from web.pipelines import asset_based
 
 __all__ = [
     "PipelineUI",

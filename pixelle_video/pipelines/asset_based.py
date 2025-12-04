@@ -27,22 +27,26 @@ Example:
     result = await pipeline(
         assets=["/path/img1.jpg", "/path/img2.jpg"],
         video_title="Pet Store Year-End Sale",
-        style="warm and friendly",
+        intent="Promote our pet store's year-end sale with a warm and friendly tone",
         duration=30
     )
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 from pathlib import Path
 
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from pixelle_video.pipelines.linear import LinearVideoPipeline, PipelineContext
+from pixelle_video.models.progress import ProgressEvent
 from pixelle_video.utils.os_util import (
     create_task_output_dir,
     get_task_final_video_path
 )
+
+# Type alias for progress callback
+ProgressCallback = Optional[Callable[[ProgressEvent], None]]
 
 
 # ==================== Structured Output Models ====================
@@ -82,12 +86,12 @@ class AssetBasedPipeline(LinearVideoPipeline):
         assets: List[str],
         video_title: str = "",
         intent: Optional[str] = None,
-        style: str = "professional and engaging",
         duration: int = 30,
         source: str = "runninghub",
         bgm_path: Optional[str] = None,
         bgm_volume: float = 0.2,
         bgm_mode: str = "loop",
+        progress_callback: ProgressCallback = None,
         **kwargs
     ) -> PipelineContext:
         """
@@ -97,18 +101,21 @@ class AssetBasedPipeline(LinearVideoPipeline):
             assets: List of asset file paths
             video_title: Video title
             intent: Video intent/purpose (defaults to video_title)
-            style: Video style
             duration: Target duration in seconds
             source: Workflow source ("runninghub" or "selfhost")
             bgm_path: Path to background music file (optional)
             bgm_volume: BGM volume (0.0-1.0, default 0.2)
             bgm_mode: BGM mode ("loop" or "once", default "loop")
+            progress_callback: Optional callback for progress updates
             **kwargs: Additional parameters
         
         Returns:
             Pipeline context with generated video
         """
         from pixelle_video.pipelines.linear import PipelineContext
+        
+        # Store progress callback
+        self._progress_callback = progress_callback
         
         # Create custom context with asset-specific parameters
         ctx = PipelineContext(
@@ -117,7 +124,6 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 "assets": assets,
                 "video_title": video_title,
                 "intent": intent or video_title,
-                "style": style,
                 "duration": duration,
                 "source": source,
                 "bgm_path": bgm_path,
@@ -147,6 +153,11 @@ class AssetBasedPipeline(LinearVideoPipeline):
             await self.handle_exception(ctx, e)
             raise
     
+    def _emit_progress(self, event: ProgressEvent):
+        """Emit progress event to callback if available"""
+        if self._progress_callback:
+            self._progress_callback(event)
+    
     async def setup_environment(self, context: PipelineContext) -> PipelineContext:
         """
         Analyze uploaded assets and build asset index
@@ -172,7 +183,17 @@ class AssetBasedPipeline(LinearVideoPipeline):
         if not assets:
             raise ValueError("No assets provided. Please upload at least one image or video.")
         
-        logger.info(f"Found {len(assets)} assets to analyze")
+        total_assets = len(assets)
+        logger.info(f"Found {total_assets} assets to analyze")
+        
+        # Emit initial progress (0-15% for asset analysis)
+        self._emit_progress(ProgressEvent(
+            event_type="analyzing_assets",
+            progress=0.01,
+            frame_current=0,
+            frame_total=total_assets,
+            extra_info="start"
+        ))
         
         self.asset_index = {}
         
@@ -183,7 +204,17 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 logger.warning(f"Asset not found: {asset_path}")
                 continue
             
-            logger.info(f"Analyzing asset {i}/{len(assets)}: {asset_path_obj.name}")
+            logger.info(f"Analyzing asset {i}/{total_assets}: {asset_path_obj.name}")
+            
+            # Emit progress for this asset
+            progress = 0.01 + (i - 1) / total_assets * 0.14  # 1% - 15%
+            self._emit_progress(ProgressEvent(
+                event_type="analyzing_asset",
+                progress=progress,
+                frame_current=i,
+                frame_total=total_assets,
+                extra_info=asset_path_obj.name
+            ))
             
             # Determine asset type
             asset_type = self._get_asset_type(asset_path_obj)
@@ -222,34 +253,35 @@ class AssetBasedPipeline(LinearVideoPipeline):
         # Store asset index in context
         context.asset_index = self.asset_index
         
+        # Emit completion of asset analysis
+        self._emit_progress(ProgressEvent(
+            event_type="analyzing_assets",
+            progress=0.15,
+            frame_current=total_assets,
+            frame_total=total_assets,
+            extra_info="complete"
+        ))
+        
         return context
     
     async def determine_title(self, context: PipelineContext) -> PipelineContext:
         """
-        Use user-provided title or generate one via LLM
+        Use user-provided title if available, otherwise leave empty
         
         Args:
             context: Pipeline context
         
         Returns:
-            Updated context with title
+            Updated context with title (may be empty)
         """
-        from pixelle_video.utils.content_generators import generate_title
-        
         title = context.request.get("video_title")
         
         if title:
             context.title = title
             logger.info(f"📝 Video title: {title} (user-specified)")
         else:
-            # Generate title from intent using LLM
-            intent = context.request.get("intent", context.input_text)
-            context.title = await generate_title(
-                self.core.llm,
-                content=intent,
-                strategy="llm"
-            )
-            logger.info(f"📝 Video title: {context.title} (LLM-generated)")
+            context.title = ""
+            logger.info(f"📝 No video title specified (will be hidden in template)")
         
         return context
     
@@ -267,10 +299,16 @@ class AssetBasedPipeline(LinearVideoPipeline):
         """
         logger.info("🤖 Generating video script with LLM...")
         
+        # Emit progress for script generation (15% - 25%)
+        self._emit_progress(ProgressEvent(
+            event_type="generating_script",
+            progress=0.16
+        ))
+        
         # Build prompt for LLM
-        intent = context.request.get("intent", context.title)
-        style = context.request.get("style", "professional and engaging")
+        intent = context.request.get("intent", context.input_text)
         duration = context.request.get("duration", 30)
+        title = context.title  # May be empty if user didn't provide one
         
         # Prepare asset descriptions with full paths for LLM to reference
         asset_info = []
@@ -279,11 +317,13 @@ class AssetBasedPipeline(LinearVideoPipeline):
         
         assets_text = "\n".join(asset_info)
         
+        # Build title section for prompt (only if title is provided)
+        title_section = f"- Video Title: {title}\n" if title else ""
+        
         prompt = f"""You are a video script writer. Generate a {duration}-second video script.
 
 ## Requirements
-- Intent: {intent}
-- Style: {style}
+{title_section}- Intent: {intent}
 - Target Duration: {duration} seconds
 
 ## Available Assets (use the exact path in your response)
@@ -295,6 +335,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
 3. Each scene can have 1-5 narration sentences
 4. Try to use all available assets, but it's OK to reuse if needed
 5. Total duration of all scenes should be approximately {duration} seconds
+{f"6. The narrations should align with the video title: {title}" if title else ""}
 
 ## Output Requirements
 For each scene, provide:
@@ -336,6 +377,13 @@ Generate the video script now:"""
                     scene["asset_path"] = fallback_path
         
         logger.success(f"✅ Generated script with {len(context.script)} scenes")
+        
+        # Emit progress after script generation
+        self._emit_progress(ProgressEvent(
+            event_type="generating_script",
+            progress=0.25,
+            extra_info="complete"
+        ))
         
         # Log script preview
         for scene in context.script:
@@ -413,7 +461,7 @@ Generate the video script now:"""
         context.narrations = all_narrations
         
         # Get template dimensions
-        template_name = context.params.get("frame_template", "1080x1920/image_default.html")
+        template_name = "1080x1920/image_pure.html"
         # Extract dimensions from template name (e.g., "1080x1920")
         try:
             dims = template_name.split("/")[0].split("x")
@@ -492,9 +540,25 @@ Generate the video script now:"""
         
         storyboard = context.storyboard
         config = context.config
+        total_frames = len(storyboard.frames)
+        
+        # Progress range: 30% - 85% for frame production
+        base_progress = 0.30
+        progress_range = 0.55  # 85% - 30%
         
         for i, frame in enumerate(storyboard.frames, 1):
-            logger.info(f"Producing scene {i}/{len(storyboard.frames)}...")
+            logger.info(f"Producing scene {i}/{total_frames}...")
+            
+            # Emit progress for this frame (each frame has 4 steps: audio, combine, duration, compose)
+            frame_progress = base_progress + (i - 1) / total_frames * progress_range
+            self._emit_progress(ProgressEvent(
+                event_type="frame_step",
+                progress=frame_progress,
+                frame_current=i,
+                frame_total=total_frames,
+                step=1,
+                action="audio"
+            ))
             
             # Get scene data with narrations
             scene = frame._scene_data
@@ -523,6 +587,17 @@ Generate the video script now:"""
             # Concatenate all narration audios for this scene
             if len(narration_audios) > 1:
                 from pixelle_video.utils.os_util import get_task_frame_path
+                
+                # Emit progress for combining audio
+                frame_progress = base_progress + ((i - 1) + 0.25) / total_frames * progress_range
+                self._emit_progress(ProgressEvent(
+                    event_type="frame_step",
+                    progress=frame_progress,
+                    frame_current=i,
+                    frame_total=total_frames,
+                    step=2,
+                    action="audio"
+                ))
                 
                 combined_audio_path = Path(context.task_dir) / "frames" / f"{i:02d}_audio.mp3"
                 
@@ -564,6 +639,17 @@ Generate the video script now:"""
             # Since we already have the audio and image, we bypass some steps
             # by manually calling the composition steps
             
+            # Emit progress for duration calculation
+            frame_progress = base_progress + ((i - 1) + 0.5) / total_frames * progress_range
+            self._emit_progress(ProgressEvent(
+                event_type="frame_step",
+                progress=frame_progress,
+                frame_current=i,
+                frame_total=total_frames,
+                step=3,
+                action="compose"
+            ))
+            
             # Get audio duration for frame duration
             import subprocess
             duration_cmd = [
@@ -576,15 +662,34 @@ Generate the video script now:"""
             duration_result = subprocess.run(duration_cmd, capture_output=True, text=True, check=True)
             frame.duration = float(duration_result.stdout.strip())
             
+            # Emit progress for video composition
+            frame_progress = base_progress + ((i - 1) + 0.75) / total_frames * progress_range
+            self._emit_progress(ProgressEvent(
+                event_type="frame_step",
+                progress=frame_progress,
+                frame_current=i,
+                frame_total=total_frames,
+                step=4,
+                action="video"
+            ))
+            
             # Use FrameProcessor for proper composition
             processed_frame = await self.core.frame_processor(
                 frame=frame,
                 storyboard=storyboard,
                 config=config,
-                total_frames=len(storyboard.frames)
+                total_frames=total_frames
             )
             
             logger.success(f"✅ Scene {i} complete")
+        
+        # Emit completion of frame production
+        self._emit_progress(ProgressEvent(
+            event_type="processing_frame",
+            progress=0.85,
+            frame_current=total_frames,
+            frame_total=total_frames
+        ))
         
         return context
     
@@ -599,6 +704,12 @@ Generate the video script now:"""
             Updated context with final video path
         """
         logger.info("🎞️ Concatenating scenes...")
+        
+        # Emit progress for concatenation (85% - 95%)
+        self._emit_progress(ProgressEvent(
+            event_type="concatenating",
+            progress=0.86
+        ))
         
         # Collect video segments from storyboard frames
         scene_videos = [frame.video_segment_path for frame in context.storyboard.frames]
@@ -626,6 +737,13 @@ Generate the video script now:"""
         
         logger.success(f"✅ Final video: {final_video_path}")
         
+        # Emit completion of concatenation
+        self._emit_progress(ProgressEvent(
+            event_type="concatenating",
+            progress=0.95,
+            extra_info="complete"
+        ))
+        
         return context
     
     async def finalize(self, context: PipelineContext) -> PipelineContext:
@@ -641,7 +759,83 @@ Generate the video script now:"""
         logger.success(f"🎉 Asset-based video generation complete!")
         logger.info(f"Video: {context.final_video_path}")
         
+        # Emit completion
+        self._emit_progress(ProgressEvent(
+            event_type="completed",
+            progress=1.0
+        ))
+        
+        # Persist metadata for history tracking
+        await self._persist_task_data(context)
+        
         return context
+    
+    async def _persist_task_data(self, ctx: PipelineContext):
+        """
+        Persist task metadata and storyboard to filesystem for history tracking
+        """
+        from pathlib import Path
+        
+        try:
+            storyboard = ctx.storyboard
+            task_id = ctx.task_id
+            
+            if not task_id:
+                logger.warning("No task_id in context, skipping persistence")
+                return
+            
+            # Get file size
+            video_path_obj = Path(ctx.final_video_path)
+            file_size = video_path_obj.stat().st_size if video_path_obj.exists() else 0
+            
+            # Build metadata
+            input_params = {
+                "text": ctx.input_text,
+                "mode": "asset_based",
+                "title": ctx.title or "",
+                "n_scenes": len(storyboard.frames) if storyboard else 0,
+                "assets": ctx.request.get("assets", []),
+                "intent": ctx.request.get("intent"),
+                "duration": ctx.request.get("duration"),
+                "source": ctx.request.get("source"),
+                "voice_id": ctx.request.get("voice_id"),
+                "tts_speed": ctx.request.get("tts_speed"),
+            }
+            
+            metadata = {
+                "task_id": task_id,
+                "created_at": storyboard.created_at.isoformat() if storyboard and storyboard.created_at else None,
+                "completed_at": storyboard.completed_at.isoformat() if storyboard and storyboard.completed_at else None,
+                "status": "completed",
+                
+                "input": input_params,
+                
+                "result": {
+                    "video_path": ctx.final_video_path,
+                    "duration": storyboard.total_duration if storyboard else 0,
+                    "file_size": file_size,
+                    "n_frames": len(storyboard.frames) if storyboard else 0
+                },
+                
+                "config": {
+                    "llm_model": self.core.config.get("llm", {}).get("model", "unknown"),
+                    "llm_base_url": self.core.config.get("llm", {}).get("base_url", "unknown"),
+                    "source": ctx.request.get("source", "runninghub"),
+                }
+            }
+            
+            # Save metadata
+            await self.core.persistence.save_task_metadata(task_id, metadata)
+            logger.info(f"💾 Saved task metadata: {task_id}")
+            
+            # Save storyboard
+            if storyboard:
+                await self.core.persistence.save_storyboard(task_id, storyboard)
+                logger.info(f"💾 Saved storyboard: {task_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to persist task data: {e}")
+            # Don't raise - persistence failure shouldn't break video generation
     
     # Helper methods
     

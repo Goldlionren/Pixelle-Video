@@ -169,7 +169,7 @@ def render_content_input():
             }
 
 
-def render_bgm_section():
+def render_bgm_section(key_prefix=""):
     """Render BGM selection section"""
     with st.container(border=True):
         st.markdown(f"**{tr('section.bgm')}**")
@@ -204,7 +204,8 @@ def render_bgm_section():
             "BGM",
             bgm_options,
             index=default_index,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key=f"{key_prefix}bgm_selector"
         )
         
         # BGM volume slider (only show when BGM is selected)
@@ -216,7 +217,7 @@ def render_bgm_section():
                 value=0.2,
                 step=0.01,
                 format="%.2f",
-                key="bgm_volume_slider",
+                key=f"{key_prefix}bgm_volume_slider",
                 help=tr("bgm.volume_help")
             )
         else:
@@ -224,7 +225,7 @@ def render_bgm_section():
         
         # BGM preview button (only if BGM is not "None")
         if bgm_choice != tr("bgm.none"):
-            if st.button(tr("bgm.preview"), key="preview_bgm", use_container_width=True):
+            if st.button(tr("bgm.preview"), key=f"{key_prefix}preview_bgm", use_container_width=True):
                 from pixelle_video.utils.os_util import get_resource_path, resource_exists
                 try:
                     if resource_exists("bgm", bgm_choice):
