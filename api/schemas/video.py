@@ -34,7 +34,7 @@ class VideoGenerateRequest(BaseModel):
     title: Optional[str] = Field(None, description="Video title (auto-generated if not provided)")
     
     # === Basic Config ===
-    n_scenes: int = Field(5, ge=1, le=20, description="Number of scenes (generate mode only)")
+    n_scenes: Optional[int] = Field(5, ge=1, le=20, description="Number of scenes (only used in 'generate' mode, ignored in 'fixed' mode)")
     
     # === TTS Parameters ===
     tts_workflow: Optional[str] = Field(
