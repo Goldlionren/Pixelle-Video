@@ -8,7 +8,7 @@
 1. **本地跑通**：首先确保工作流在您的本地 ComfyUI 中能正常运行。
 2. **参数绑定**：找到需要由程序动态传入提示词的 Text 节点（CLIP Text Encode 或类似文本输入节点）。
    - 编辑该节点的**标题 (Title)**。
-   - 修改标题为 `$.prompt.text!` 或 `$.prompt.value!`（根据节点接受的输入类型决定）。
+   - 修改标题为 `$prompt.text!` 或 `$prompt.value!`（根据节点接受的输入类型决定）。
      <img src="https://github.com/user-attachments/assets/ddb1962c-9272-486f-84ab-8019c3fb5bf4" width="600" alt="参数绑定示例" />
 
    - *参考示例：可以查看 `workflows/selfhost/` 目录下现有 JSON 文件的编辑方式。*
